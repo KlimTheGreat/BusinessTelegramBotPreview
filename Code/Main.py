@@ -2,13 +2,15 @@
 # библиотека - https://github.com/python-telegram-bot/python-telegram-bot
 # Ю касса - https://yookassa.ru/docs/support/payments/onboarding/integration/cms-module/telegram
 # mySql - https://dev.mysql.com/doc/connector-python/en/connector-python-examples.html
+
 import html
 import json
 import logging
 import traceback
-import MySqlConnector as db
 from os import environ
 from time import strftime
+from DBInterface import UsersTable
+from DBInterface.Checker import check_mysql
 from telegram import (
     LabeledPrice,
     ReplyKeyboardMarkup,
@@ -92,8 +94,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 # displays info, saves new user data
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
-    if user.id in await db.get_all_user_ids():
-        user_name = await db.get_user_name(user.id)
+    if user.id in await UsersTable.get_all_user_ids():
+        user_name = await UsersTable.get_user_name(user.id)
         await update.message.reply_text(
             f"Привет, *{user_name}*!\n",
             parse_mode=ParseMode.MARKDOWN,
@@ -102,7 +104,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return await data_handler(update, context)
     else:
         user_name = user.first_name
-        await db.save_main_user_data(
+        await UsersTable.save_main_user_data(
             user.id,
             user_name,
             user.is_bot
@@ -126,9 +128,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 async def data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.message.from_user.id
-    user_name = await db.get_user_name(user_id)
-    user_phone = await db.get_user_phone(user_id)
-    user_email = await db.get_user_email(user_id)
+    user_name = await UsersTable.get_user_name(user_id)
+    user_phone = await UsersTable.get_user_phone(user_id)
+    user_email = await UsersTable.get_user_email(user_id)
     await update.message.reply_text(
         "Твои данные: \n\n"
         f"Имя: *{user_name}*\n"
@@ -162,7 +164,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_name = update.message.text
-    await db.save_temp_name(update.message.from_user.id, user_name)
+    await UsersTable.save_temp_name(update.message.from_user.id, user_name)
     reply_keyboard = [['Да', 'Нет']]
     await update.message.reply_text(
         f"Я могу называть тебя *{user_name}*?\n"
@@ -187,7 +189,7 @@ async def change_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 
 async def name_ok(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await db.set_temp_name(update.message.from_user.id)
+    await UsersTable.set_perm_name(update.message.from_user.id)
     button = KeyboardButton(text="Отправить свой контакт", request_contact=True)
     reply_keyboard = [[button]]
     await update.message.reply_text(
@@ -212,7 +214,7 @@ async def phone_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     else:
         user_phone = update.message.text
     reply_keyboard = [['Сохранить', 'Изменить']]
-    await db.save_temp_phone(update.message.from_user.id, user_phone)
+    await UsersTable.save_temp_phone(update.message.from_user.id, user_phone)
     await update.message.reply_text(
         f"Отлично, твой номер {user_phone}?",
         reply_markup=ReplyKeyboardMarkup(
@@ -259,7 +261,7 @@ async def wrong_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 
 async def confirm_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await db.set_temp_phone(update.message.from_user.id)
+    await UsersTable.set_perm_phone(update.message.from_user.id)
     await update.message.reply_text(
         "Супер!\n"
         "А теперь отправь, пожалуйста, свой email.\n\n"
@@ -283,7 +285,7 @@ async def skip_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def email_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_email = update.message.text
     reply_keyboard = [['Сохранить', 'Изменить']]
-    await db.save_temp_email(update.message.from_user.id, user_email)
+    await UsersTable.save_temp_email(update.message.from_user.id, user_email)
     await update.message.reply_text(
         f"Отлично, твой email - {user_email}\n"
         "Сохранить?",
@@ -318,7 +320,7 @@ async def wrong_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 async def confirm_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.message.from_user.id
-    await db.set_temp_email(user_id)
+    await UsersTable.set_perm_email(user_id)
     await update.message.reply_text(
         "Супер, спасибо!",
         reply_markup=ReplyKeyboardRemove()
@@ -346,7 +348,7 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await db.remove_user_data(update.message.from_user.id)
+    await UsersTable.remove_user_data(update.message.from_user.id)
     await update.message.reply_text(
         "Все Ваши данные были удалены из базы.\n"
         "_/start - начать беседу заново_",
@@ -415,7 +417,7 @@ async def pre_checkout_callback(update: Update, context: ContextTypes.DEFAULT_TY
 # confirms successful payment
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
-    await db.save_user_paid(message.from_user.id, True)
+    await UsersTable.save_user_paid(message.from_user.id, True)
     logger.info(f"New payment: {message.from_user.id} -> {message.successful_payment.provider_payment_charge_id}")
     await update.message.reply_text(
         "Спасибо за оплату! (тестовую)\n"
@@ -432,7 +434,7 @@ def main() -> None:
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).read_timeout(7).get_updates_read_timeout(42).build()
 
     # check mysql
-    db.check_mysql()
+    check_mysql()
 
     # regex for validating messages
     phone_regex = r"^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$"
