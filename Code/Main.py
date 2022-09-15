@@ -9,8 +9,8 @@ import logging
 import traceback
 from os import environ
 from time import strftime
-from DBInterface import UsersTable
-from DBInterface.Checker import check_mysql
+from Code.DBInterface import UsersTable
+from Code.DBInterface.Checker import check_mysql
 from telegram import (
     LabeledPrice,
     ReplyKeyboardMarkup,
