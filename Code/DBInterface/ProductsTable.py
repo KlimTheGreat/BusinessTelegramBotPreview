@@ -1,6 +1,6 @@
 import logging
 from time import strftime
-from Code.DBInterface.Checker import (
+from Checker import (
     get_mysql_connection,
     PRODUCTS_TABLE
 )

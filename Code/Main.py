@@ -9,8 +9,10 @@ import logging
 import traceback
 from os import environ
 from time import strftime
-from Code.DBInterface import UsersTable
-from Code.DBInterface.Checker import check_mysql
+from DBInterface import (
+    UsersTable,
+    check_mysql
+)
 from telegram import (
     LabeledPrice,
     ReplyKeyboardMarkup,
@@ -164,7 +166,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_name = update.message.text
-    await UsersTable.save_temp_name(update.message.from_user.id, user_name)
+    await UsersTable.save_user_temp_name(update.message.from_user.id, user_name)
     reply_keyboard = [['Да', 'Нет']]
     await update.message.reply_text(
         f"Я могу называть тебя *{user_name}*?\n"
@@ -214,7 +216,7 @@ async def phone_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     else:
         user_phone = update.message.text
     reply_keyboard = [['Сохранить', 'Изменить']]
-    await UsersTable.save_temp_phone(update.message.from_user.id, user_phone)
+    await UsersTable.save_user_temp_phone(update.message.from_user.id, user_phone)
     await update.message.reply_text(
         f"Отлично, твой номер {user_phone}?",
         reply_markup=ReplyKeyboardMarkup(
@@ -285,7 +287,7 @@ async def skip_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def email_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_email = update.message.text
     reply_keyboard = [['Сохранить', 'Изменить']]
-    await UsersTable.save_temp_email(update.message.from_user.id, user_email)
+    await UsersTable.save_user_temp_email(update.message.from_user.id, user_email)
     await update.message.reply_text(
         f"Отлично, твой email - {user_email}\n"
         "Сохранить?",
